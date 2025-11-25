@@ -11,4 +11,9 @@ The project verifies the **Perceptron Convergence Theorem** using synthetic 2D d
 ## Files
 - `Project_Report.pdf` – Complete report  
 - `src/` – Code for data generation, perceptron training, and visualization  
-- `notebooks/` – Jupyter notebook for running experiments  
+- `notebooks/` – Jupyter notebook for running experiments
+
+## Contributors
+- Adithi Roy Chowdhury (25M2167)
+- Rishi Raj Vishwakarma (25M2161)
+
