@@ -1,0 +1,2 @@
+\contentsline {paragraph}{Decision Boundary}{10}{section*.25}%
+\contentsline {section}{\numberline {.1}Perceptron Weight and Bias updates}{10}{section.Alph0.1}%

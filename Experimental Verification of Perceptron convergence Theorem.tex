@@ -1,0 +1,803 @@
+\documentclass[12pt,a4paper]{report}
+
+% --------------------------------------------------
+% Packages
+% --------------------------------------------------
+\usepackage{lipsum}
+\usepackage{graphicx}
+\usepackage{setspace}
+\usepackage{geometry}
+\usepackage{amsmath, amssymb}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{float}
+\usepackage{graphicx}
+\usepackage{subcaption}
+\usepackage{hyperref}
+
+
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    urlcolor=blue,
+    citecolor=blue
+}
+
+
+
+
+\definecolor{keyword}{RGB}{0,0,255}
+\definecolor{comment}{RGB}{34,139,34}
+\definecolor{string}{RGB}{178,34,34}
+
+\lstset{
+    language=Python,
+    basicstyle=\ttfamily\footnotesize,
+    keywordstyle=\color{keyword}\bfseries,
+    stringstyle=\color{string},
+    commentstyle=\color{comment}\itshape,
+    numbers=left,
+    numberstyle=\tiny,
+    stepnumber=1,
+    frame=single,
+    breaklines=true,
+    showstringspaces=false,
+    tabsize=4
+}
+
+\geometry{margin=0.7in}
+
+% --------------------------------------------------
+% Title Page
+% --------------------------------------------------
+\begin{document}
+\begin{titlepage}
+    \centering
+    \vspace*{0.5cm}
+    
+    {\Large \textbf{Indian Institute of Technology Bombay}}\\[0.25cm]
+    \textbf{Course: Foundations of Machine Learning CS 725}\\[1.5cm]
+    
+    {\LARGE \textbf{Experimental Verification of Perceptron Convergence Algorithm}}\\[2cm]
+    
+    \textbf{Submitted By}\\[0.5cm]
+    {\large
+    Adithi Roy Chowdhury (25M2167)\\
+    Rishi Raj Vishwakarma (25M2161)\\
+    Abhishek Pal (25M2160)\\
+    Deepak Mewada (25M2158)\\
+    Samridh Agarwal (25M2156)\\
+    }
+    \vspace{1.5cm}
+    \textbf{Academic Year: 2025--2026}\\[1cm]
+    
+    \vfill
+    \textbf{Under the Guidance of:}\\[0.2cm]
+    \textit{Dr. Abir De}\\   % Leave blank for name
+    \vfill
+    
+\end{titlepage}
+
+\begin{abstract}
+The perceptron is one of the earliest linear classifiers and comes with a classical convergence theorem: if the training data are linearly separable, the perceptron learning algorithm converges in a finite number of updates, with a worst--case mistake bound of order $\bigl(\tfrac{R}{\gamma}\bigr)^{2}$, where $R$ is the radius of the dataset and $\gamma$ is the geometric margin. This project presents an experimental verification of this convergence behaviour.
+
+We first construct two-dimensional synthetic datasets using \texttt{make\_classification}, controlling class separation to obtain both linearly separable and non-separable scenarios. Labels are encoded in $\{-1, +1\}$ and a standard perceptron with an explicit bias term is implemented. During training, we record the sequence of weight and bias updates and visualize the evolution of the decision boundary over the training samples, including an animation that shows how misclassified points successively rotate and translate the separating hyperplane until a stable separator is reached in the separable case.
+
+For separable datasets, we empirically estimate the radius $R$ and the margin $\hat{\gamma}$ of the final classifier, compute the theoretical upper bound $\bigl(\tfrac{R}{\hat{\gamma}}\bigr)^{2}$ on the number of mistakes, and compare it with the actual number of updates observed. Our experiments confirm that the perceptron converges in finitely many steps and that the observed number of updates is significantly smaller than the conservative theoretical bound. Additional experiments on overlapping (non-separable) data and a hinge-loss-based variant further illustrate the limitations of the classical theorem and the behaviour of perceptron-like algorithms beyond the separable setting.
+\end{abstract}
+
+\section*{Introduction}
+The perceptron is a linear binary classifier that updates its parameters using misclassified training examples. The classical \textit{Perceptron Convergence Theorem} states that if the training data are linearly separable, then the perceptron learning algorithm converges to a separating hyperplane in a finite number of updates. The maximum number of mistakes made during training can be bounded in terms of the radius of the dataset and the geometric margin between the two classes.
+
+This project experimentally verifies this theorem by implementing the perceptron from scratch, training it on synthetically generated two--dimensional datasets with controlled separability, recording the number of updates until convergence, and comparing it with the theoretical mistake bound. We also study the perceptron on non--separable data, showing that the algorithm does not converge in this case, thereby underscoring the necessity of the separability assumption.
+
+\section*{Theory}
+\subsection*{Perceptron Model}
+The perceptron is a linear classifier for binary labels $y \in \{-1, +1\}$.  
+Given an input vector $x \in \mathbb{R}^{d}$, the perceptron predicts
+\[
+\hat{y} = \mathrm{sign}(\langle w, x \rangle + b),
+\]
+where $w \in \mathbb{R}^{d}$ is the weight vector and $b \in \mathbb{R}$ is the bias term.
+
+\subsection*{Learning Rule}
+During training, whenever the perceptron misclassifies a sample $(x_i, y_i)$, the parameters are updated as
+\[
+w \leftarrow w + y_i x_i, \qquad
+b \leftarrow b + y_i.
+\]
+No update is made on correctly classified samples.
+
+\subsection*{Linear Separability}
+A dataset $\{(x_i, y_i)\}_{i=1}^{n}$ is called \emph{linearly separable} if there exists some $(w^\ast,b^\ast)$ such that
+\[
+y_i(\langle w^\ast, x_i \rangle + b^\ast ) > 0 \quad \forall i.
+\]
+Define the \emph{margin}
+\[
+\gamma = \min_{i} \frac{y_i(\langle w^\ast, x_i \rangle + b^\ast)}{\|w^\ast\|}
+\]
+and let the data radius be
+\[
+R = \max_{i}\|x_i\|.
+\]
+
+\subsection*{Perceptron Convergence Theorem}
+\textbf{Theorem.} If the dataset is linearly separable with margin $\gamma > 0$, then the perceptron learning algorithm makes only finitely many mistakes, and the total number of updates $T$ satisfies
+\[
+T \leq \left(\frac{R}{\gamma}\right)^{2}.
+\]
+Hence, the algorithm converges to a separating hyperplane in a finite number of steps.
+
+\subsection*{Non--Separable Case}
+If the dataset is not linearly separable, no finite update bound exists and the perceptron may continue updating indefinitely, oscillating without reaching convergence.
+
+\subsection*{Proof of the Perceptron Convergence Theorem}
+
+\noindent\textbf{Step 1: The Perceptron Vector Makes Progress Toward the Optimal Separator}
+
+Assume the perceptron makes an update on $(x_i, y_i)$:
+\[
+w^{(t+1)} = w^{(t)} + y_i x_i.
+\]
+Take the dot product with the optimal weight vector $w^*$ (where $\|w^*\| = 1$):
+\[
+w^{(t+1)} \cdot w^* = w^{(t)} \cdot w^* + y_i (x_i \cdot w^*).
+\]
+Since the margin is at least $\gamma$, we have
+\[
+y_i (x_i \cdot w^*) \ge \gamma.
+\]
+Thus,
+\[
+w^{(t+1)} \cdot w^* \ge w^{(t)} \cdot w^* + \gamma.
+\]
+By induction, after $T$ updates:
+\[
+w^{(T)} \cdot w^* \ge T \gamma.
+\]
+
+\noindent\textbf{Step 2: The Norm of the Perceptron Vector Cannot Grow Too Quickly}
+
+We compute:
+\[
+\|w^{(t+1)}\|^2
+= \|w^{(t)} + y_i x_i\|^2
+= \|w^{(t)}\|^2 + \|x_i\|^2 + 2 y_i \bigl( w^{(t)} \cdot x_i \bigr).
+\]
+Since the point is misclassified:
+\[
+y_i \bigl( w^{(t)} \cdot x_i \bigr) \le 0.
+\]
+Thus,
+\[
+\|w^{(t+1)}\|^2 \le \|w^{(t)}\|^2 + \|x_i\|^2 \le \|w^{(t)}\|^2 + R^2.
+\]
+By induction:
+\[
+\|w^{(T)}\|^2 \le T R^2.
+\]
+Combining:
+\[
+T^2 \gamma^2 \le T R^2.
+\]
+Divide both sides by $T \gamma^2$:
+\[
+T \le \frac{R^2}{\gamma^2}.
+\]
+
+\section*{Algorithm}
+
+\subsection*{Perceptron Learning Algorithm (with Bias Term)}
+
+We implement the standard perceptron learning algorithm with an explicit bias term.  
+The training data are $\{(x_i, y_i)\}_{i=1}^{n}$ with $x_i \in \mathbb{R}^{d}$ and $y_i \in \{-1, +1\}$.
+
+\subsubsection*{Inputs}
+\begin{itemize}
+    \item Training set $\{(x_i, y_i)\}_{i=1}^{n}$
+    \item Learning rate $\eta > 0$ (in the code: \texttt{lr = 1.0})
+    \item Maximum number of epochs $T_{\max}$ (in the code: \texttt{max\_epochs = 1000})
+\end{itemize}
+
+\subsubsection*{Outputs}
+\begin{itemize}
+    \item Final weight vector $w \in \mathbb{R}^{d}$
+    \item Final bias $b \in \mathbb{R}$
+    \item History of parameters after each update: $(w^{(t)}, b^{(t)})$, used for visualization
+\end{itemize}
+
+\subsubsection*{Pseudocode}
+
+\noindent
+\textbf{Initialize:}
+\begin{itemize}
+    \item $w \leftarrow 0 \in \mathbb{R}^{d}$
+    \item $b \leftarrow 0$
+    \item \texttt{history} $\leftarrow [\ ]$ \, (empty list to store $(w, b)$ after each update)
+\end{itemize}
+
+\noindent
+\textbf{For} epoch $= 1$ to $T_{\max}$:
+\begin{enumerate}
+    \item Set \texttt{errors} $\leftarrow 0$.
+    \item \textbf{For} $i = 1$ to $n$:
+    \begin{enumerate}
+        \item Compute the activation
+        \[
+        a_i = w \cdot x_i + b.
+        \]
+        \item Predict
+        \[
+        \hat{y}_i =
+        \begin{cases}
+        +1, & \text{if } a_i \ge 0,\\
+        -1, & \text{if } a_i < 0.
+        \end{cases}
+        \]
+        \item \textbf{If} $\hat{y}_i \neq y_i$ (misclassification), then:
+        \begin{itemize}
+            \item Update the weights:
+            \[
+            w \leftarrow w + \eta\, y_i x_i,
+            \]
+            \item Update the bias:
+            \[
+            b \leftarrow b + \eta\, y_i,
+            \]
+            \item Increment \texttt{errors} $\leftarrow$ \texttt{errors} $+ 1$,
+            \item Append current $(w, b)$ to \texttt{history}.
+        \end{itemize}
+    \end{enumerate}
+    \item \textbf{If} \texttt{errors} $= 0$, then:
+    \begin{itemize}
+        \item Stop the training (the perceptron has converged).
+    \end{itemize}
+\end{enumerate}
+
+\noindent
+\textbf{Return} final $(w, b)$ and the full \texttt{history} of updates.
+
+\section*{Experimental Setup}
+
+\subsection*{Dataset Generation}
+
+We generate two--dimensional synthetic datasets using \texttt{make\_classification} from \texttt{sklearn.datasets}.  
+The data consist of two classes labeled $+1$ and $-1$, and the separability is controlled by the parameter \texttt{class\_sep}.
+
+\begin{itemize}
+    \item Each dataset contains $n = 200$ samples in $\mathbb{R}^2$.
+    \item Labels are converted to $\{-1, +1\}$ after generation.
+    \item We study two settings:
+    \begin{enumerate}
+        \item \textbf{Linearly separable data:} high \texttt{class\_sep} value.
+        \item \textbf{Non--separable data:} overlapping classes (small \texttt{class\_sep}).
+    \end{enumerate}
+\end{itemize}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\linewidth]{Media/LSdata.png}
+    \caption{Generated synthetic Linearly separable dataset with two classes in $\mathbb{R}^2$.}
+    \label{fig:dataset}
+\end{figure}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.6\linewidth]{Media/NLSdata.png}
+    \caption{Generated synthetic Non-Linearly separable dataset with two classes in $\mathbb{R}^2$.}
+    \label{fig:dataset}
+\end{figure}
+
+
+\vspace{0.2cm}
+
+\subsection*{Data Generation code}
+Here is the code that we used to generate both linearly separable and non-linearly separable cases
+\vspace{0.5cm}
+\begin{lstlisting}[caption=Synthetic Linearly separable dataset generation]
+import numpy as np
+import mathplotlib as plt
+
+X, y = make_classification(
+    n_samples=100,
+    n_features=2,
+    n_informative=1,
+    n_redundant=0,
+    n_classes=2,
+    n_clusters_per_class=1,
+    random_state=41,
+    hypercube=False,
+    class_sep=10
+)
+y_perc = np.where(y == 0, -1, 1)
+variance_scale = 2.0
+X = X * variance_scale
+plt.figure(figsize=(12, 6))
+plt.scatter(X[y_perc == -1, 0], X[y_perc == -1, 1], marker='o', label='Class -1')
+plt.scatter(X[y_perc ==  1, 0], X[y_perc ==  1, 1], marker='s', label='Class +1')
+plt.xlabel('Feature 1')
+plt.ylabel('Feature 2')
+plt.legend()
+plt.title('Linearly Separable Toy Dataset')
+plt.grid(True)
+plt.savefig("D:\Important Subjects\Machine Learning\Project\Report\Media")
+plt.show()
+
+\end{lstlisting}
+
+
+\noindent
+In order to experimentally study the perceptron convergence behavior, a two--dimensional synthetic dataset is generated using the \texttt{make\_classification} function from \texttt{sklearn.datasets}. The dataset consists of two linearly separable classes, where separability is controlled through a large \texttt{class\_sep} parameter. The resulting labels from \texttt{make\_classification} are initially encoded as \(\{0,1\}\), which are manually converted to \(\{-1,+1\}\) to match the perceptron update rule. To further spread the samples in the feature space, a scaling factor is applied to the feature matrix. Finally, the data are visualized by plotting the two classes with distinct markers, providing a clear view of their separability before applying the perceptron learning algorithm.
+
+\pagebreak
+\begin{lstlisting}[caption=Synthetic Non Separable dataset generation]
+X_bad, y_bad = make_classification(
+    n_samples=100,
+    n_features=2,
+    n_informative=2,
+    n_redundant=0,
+    n_classes=2,
+    n_clusters_per_class=1,
+    class_sep=0.5,
+    random_state=0
+)
+
+y_bad_perc = np.where(y_bad == 0, -1, 1)
+plt.figure(figsize=(5, 5))
+plt.scatter(X_bad[y_bad_perc == -1, 0], X_bad[y_bad_perc == -1, 1], marker='o', label='Class -1')
+plt.scatter(X_bad[y_bad_perc ==  1, 0], X_bad[y_bad_perc ==  1, 1], marker='s', label='Class +1')
+plt.xlabel('Feature 1')
+plt.ylabel('Feature 2')
+plt.legend()
+plt.title("Non-Separable Dataset (Overlapping Classes)")
+plt.grid(True)
+plt.savefig("D:\Important Subjects\Machine Learning\Project\Report\Media")
+plt.show()
+\end{lstlisting}
+
+\noindent
+To illustrate the limitations of the perceptron convergence theorem, a non--separable dataset is generated using the \texttt{make\_classification} function from \texttt{sklearn.datasets}. In this case, the data are constructed in two dimensions with both features being informative, and a small value of \texttt{class\_sep} is chosen to intentionally produce overlapping classes. As before, the labels originally encoded as \(\{0,1\}\) are converted to \(\{-1,+1\}\) to comply with the perceptron update rule. The resulting data are visualized using a scatter plot, where the two classes overlap significantly in the feature space, making it impossible for any linear separator to perfectly classify all points. This visualization highlights that under non--separable conditions, the perceptron fails to converge, which is consistent with the theoretical guarantees.
+
+
+
+\subsection*{Training Procedure}
+
+We train the perceptron using the update rule described in the Algorithm section.  
+The learning rate is set to $\eta = 1.0$, and training stops early when no misclassification occurs in a full pass over the data.
+
+\begin{itemize}
+    \item Maximum epochs: \texttt{1000}
+    \item Learning rate: \texttt{1.0}
+    \item Bias term is updated together with weights
+    \item After every update, the current $(w, b)$ pair is stored to visualize the evolution of the decision boundary
+\end{itemize}
+\pagebreak
+\begin{lstlisting}[caption=Perceptron Trainning Function]
+def perceptron_train(X, y, lr=1.0, max_epochs=1000):
+    n_samples, n_features = X.shape
+    w = np.zeros(n_features)
+    b = 0.0
+    history = []
+
+    for epoch in range(max_epochs):
+        errors = 0
+        for i in range(n_samples):
+            activation = np.dot(w, X[i]) + b
+            y_pred = 1 if activation >= 0 else -1
+            if y_pred != y[i]:
+                w += lr * y[i] * X[i]
+                b += lr * y[i]
+                errors += 1
+                history.append((w.copy(), b))
+        if errors == 0:
+            print(f"Perceptron converged in epoch {epoch + 1}")
+            break
+
+    return w, b, history
+
+w, b, history = perceptron_train(X, y_perc, lr=1.0, max_epochs=1000)
+print("Final weights:", w)
+print("Final bias:", b)
+
+plot_decision_boundary(X, y_perc, w, b,"Perceptron (Vanilla) on Separable Data")
+\end{lstlisting}
+
+\noindent
+Once we run the code the Algorithm converged within 4 epoches and following was the final result. Using the function that plots graphs for each of the 4 eposches, we plotted the decision boundary on the input space. Here is the code snippet that we used
+\begin{lstlisting}[caption=Generating plots of decision boundary after epoch]
+import os
+def plot_decision_boundary_save(X, y, w, b, title, filename):
+    plt.figure(figsize=(5, 5))
+    plt.scatter(X[y == -1, 0], X[y == -1, 1], marker='o', label='Class -1')
+    plt.scatter(X[y ==  1, 0], X[y ==  1, 1], marker='s', label='Class +1')
+
+    x_min, x_max = X[:, 0].min() - 1, X[:, 0].max() + 1
+    xs = np.linspace(x_min, x_max, 200)
+
+    if abs(w[1]) > 1e-12:
+        ys = -(w[0] * xs + b) / w[1]
+        plt.plot(xs, ys, linestyle='-', label='Decision boundary')
+    else:
+        x_line = -b / (w[0] + 1e-12)
+        plt.axvline(x_line, linestyle='-', label='Decision boundary')
+
+    plt.xlabel('Feature 1')
+    plt.ylabel('Feature 2')
+    plt.title(title)
+    plt.legend()
+    plt.grid(True)
+    
+    plt.savefig(os.path.join("D:\Important Subjects\Machine Learning\Project\Report\Media\Convergence plots", filename), dpi=300, bbox_inches='tight')
+    plt.close()
+\end{lstlisting}
+
+\subsection*{Results of Training}
+Once the trainning for loop was exited. The following results are obtained
+\begin{lstlisting}[frame=single]
+Perceptron converged in epoch 4
+Final weights: [7.09703775 0.62987918]
+Final bias: 9.0
+\end{lstlisting}
+
+Here are the plots showing decision boundary after every epoch
+\begin{figure}[H]
+    \centering
+    % Row 1
+    \begin{subfigure}{0.48\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{Media/Convergence plots/boundary_epoch_0.png}
+        \caption{Epoch 1}
+        \label{fig:epoch0}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}{0.48\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{Media/Convergence plots/boundary_epoch_1.png}
+        \caption{Epoch 2}
+        \label{fig:epoch5}
+    \end{subfigure}
+
+    \vspace{0.4cm}
+
+    % Row 2
+    \begin{subfigure}{0.48\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{Media/Convergence plots/boundary_epoch_2.png}
+        \caption{Epoch 3}
+        \label{fig:epoch10}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}{0.48\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{Media/Convergence plots/boundary_epoch_3.png}
+        \caption{Epoch 4}
+        \label{fig:epoch15}
+    \end{subfigure}
+
+    \caption{Evolution of the perceptron decision boundary over training epochs.}
+    \label{fig:perceptron_convergence}
+\end{figure}
+
+\subsection*{Updates in Weights and Bias terms}
+As we ran the algorithm it converged in 4 epoches but the total number of updates that is mentioned in Convergence theorem is 21. As Updates happens only when we have a mistake in classification, then only the update rule is called. Our code not only captures the training process but also the update history of the weights the final history array that was created once the algorithm converged is given as
+\begin{lstlisting}[caption={Final History array after the algorithm  }, frame = single]
+    history array at epoch  {2}  sample  {8}  :  [(array([3.18173012, 4.02398429]), -1.0), (array([ 3.1378471 , -1.93786434]), 0.0), (array([ 2.77318887, -0.2633231 ]), 1.0), (array([ 2.12962518, -1.94226489]), 2.0), (array([4.32446697, 1.01781785]), 1.0), (array([3.62140857, 1.31221853]), 2.0), (array([ 3.40910773, -1.09605838]), 3.0), (array([2.08122805, 1.95332431]), 4.0), (array([5.18645851, 0.264209  ]), 3.0), (array([ 4.47104397, -3.36906979]), 4.0), (array([7.04722514, 2.53839253]), 3.0), (array([6.51581261, 2.66839097]), 4.0), (array([6.01817204, 1.20608633]), 5.0), (array([ 5.30919124, -0.21012546]), 6.0), (array([4.19188526, 1.28706508]), 7.0), (array([ 4.14800223, -4.67478355]), 8.0), (array([ 7.90712105, -2.99617403]), 7.0), (array([ 7.54246282, -1.32163278]), 8.0), (array([6.21458314, 1.72774991]), 9.0), (array([ 8.21434374, -0.86731136]), 8.0), (array([7.09703775, 0.62987918]), 9.0)]
+\end{lstlisting}
+
+\subsubsection*{Why we captured the history of every update?}
+Capturing the history enabled us to cleary plot the decision boundary after each update.
+Length of the history array also gives us the total number of updates that the algorithm takes to converge that is 21.
+For full length updation in weights \hyperref[sec:Weight_updates]{please refer to appendix} of the report.
+
+\paragraph{Decision Boundary}
+after each update for all the 21 updates are shown \hyperref[sec:Decision_boundary]{here in appendix}. Once we ploted the decision boundaries it is quite easy to see how actually the decision boundary changes with updation rule. As the algorithm converges we get the final plot beyond which the decision boundary will not change.
+
+
+
+\vspace{0.2cm}
+
+\subsection*{Margin and Theoretical Bound Estimation}
+
+For the separable dataset, we estimate the geometric margin of the learned separator and compute the theoretical mistake bound
+\[
+\left(\frac{R}{\gamma}\right)^{2},
+\]
+where $R$ is the maximum norm of the data points.  
+This value is compared with the actual number of perceptron updates recorded during training.
+
+Where $R$ is given mathematically as \[
+R = \max_{i} \|x_i\|
+\] and \[
+\gamma = \min_{i} \frac{y_i(\langle w, x_i \rangle + b)}{\|w\|}
+\]
+
+to calculate the values of $R$ and $\gamma$ for our dataset we used the following code
+\pagebreak
+\begin{lstlisting}[caption={Code to calculate Radius and $\gamma$}]
+R = np.max(np.linalg.norm(X, axis=1))
+print("R (max norm of samples):", R)
+
+def estimated_margin(X, y, w, b):
+    w_norm = np.linalg.norm(w)
+    margins = y * (X @ w + b) / (w_norm + 1e-12)
+    return np.min(margins)
+
+gamma_hat = estimated_margin(X, y_perc, w, b)
+print("Estimated margin gamma_hat:", gamma_hat)
+\end{lstlisting}
+
+\noindent
+To Calculate the bound suggested by Convergence theorem, we used -
+\begin{lstlisting}
+bound = (R / (gamma_hat + 1e-12)) ** 2  
+\end{lstlisting}
+
+\vspace{1cm}
+Finally we get the results of above code blocks as
+\begin{lstlisting}
+R (max norm of samples): 6.4447513916413
+Estimated margin gamma_hat: 0.21006936522129688
+Approx. theoretical upper bound on number of updates: 941.2107779492442
+Actual number of updates until convergence: 21
+\end{lstlisting}
+\vspace{1cm}
+Which is far lesser than the theoritical bound suggested by the Convergence Theorem.
+
+
+\newpage
+\appendix
+\section{Perceptron Weight and Bias updates}\label{sec:Weight_updates}
+\noindent
+Here is the complete result that was obtained after each of 21 updates of the weights and bias stored in the history array as in the code.
+\vspace{0.5cm}
+\begin{lstlisting}[caption={Full history of $(w,b)$ updates used for animation}, frame=single]
+history array at epoch  {0}  sample  {3}  :  [(array([3.18173012, 4.02398429]), -1.0)] 
+
+history array at epoch  {0}  sample  {12}  :  [(array([3.18173012, 4.02398429]), -1.0), (array([ 3.1378471 , -1.93786434]), 0.0)] 
+
+history array at epoch  {0}  sample  {18}  :  [(array([3.18173012, 4.02398429]), -1.0), (array([ 3.1378471 , -1.93786434]), 0.0), (array([ 2.77318887, -0.2633231 ]), 1.0)] 
+
+history array at epoch  {0}  sample  {35}  :  [(array([3.18173012, 4.02398429]), -1.0), (array([ 3.1378471 , -1.93786434]), 0.0), (array([ 2.77318887, -0.2633231 ]), 1.0), (array([ 2.12962518, -1.94226489]), 2.0)] 
+
+history array at epoch  {0}  sample  {48}  :  [(array([3.18173012, 4.02398429]), -1.0), (array([ 3.1378471 , -1.93786434]), 0.0), (array([ 2.77318887, -0.2633231 ]), 1.0), (array([ 2.12962518, -1.94226489]), 2.0), (array([4.32446697, 1.01781785]), 1.0)] 
+
+history array at epoch  {0}  sample  {51}  :  [(array([3.18173012, 4.02398429]), -1.0), (array([ 3.1378471 , -1.93786434]), 0.0), (array([ 2.77318887, -0.2633231 ]), 1.0), (array([ 2.12962518, -1.94226489]), 2.0), (array([4.32446697, 1.01781785]), 1.0), (array([3.62140857, 1.31221853]), 2.0)] 
+
+history array at epoch  {0}  sample  {59}  :  [(array([3.18173012, 4.02398429]), -1.0), (array([ 3.1378471 , -1.93786434]), 0.0), (array([ 2.77318887, -0.2633231 ]), 1.0), (array([ 2.12962518, -1.94226489]), 2.0), (array([4.32446697, 1.01781785]), 1.0), (array([3.62140857, 1.31221853]), 2.0), (array([ 3.40910773, -1.09605838]), 3.0)] 
+
+history array at epoch  {0}  sample  {65}  :  [(array([3.18173012, 4.02398429]), -1.0), (array([ 3.1378471 , -1.93786434]), 0.0), (array([ 2.77318887, -0.2633231 ]), 1.0), (array([ 2.12962518, -1.94226489]), 2.0), (array([4.32446697, 1.01781785]), 1.0), (array([3.62140857, 1.31221853]), 2.0), (array([ 3.40910773, -1.09605838]), 3.0), (array([2.08122805, 1.95332431]), 4.0)] 
+
+history array at epoch  {0}  sample  {68}  :  [(array([3.18173012, 4.02398429]), -1.0), (array([ 3.1378471 , -1.93786434]), 0.0), (array([ 2.77318887, -0.2633231 ]), 1.0), (array([ 2.12962518, -1.94226489]), 2.0), (array([4.32446697, 1.01781785]), 1.0), (array([3.62140857, 1.31221853]), 2.0), (array([ 3.40910773, -1.09605838]), 3.0), (array([2.08122805, 1.95332431]), 4.0), (array([5.18645851, 0.264209  ]), 3.0)] 
+
+history array at epoch  {0}  sample  {84}  :  [(array([3.18173012, 4.02398429]), -1.0), (array([ 3.1378471 , -1.93786434]), 0.0), (array([ 2.77318887, -0.2633231 ]), 1.0), (array([ 2.12962518, -1.94226489]), 2.0), (array([4.32446697, 1.01781785]), 1.0), (array([3.62140857, 1.31221853]), 2.0), (array([ 3.40910773, -1.09605838]), 3.0), (array([2.08122805, 1.95332431]), 4.0), (array([5.18645851, 0.264209  ]), 3.0), (array([ 4.47104397, -3.36906979]), 4.0)] 
+
+history array at epoch  {0}  sample  {89}  :  [(array([3.18173012, 4.02398429]), -1.0), (array([ 3.1378471 , -1.93786434]), 0.0), (array([ 2.77318887, -0.2633231 ]), 1.0), (array([ 2.12962518, -1.94226489]), 2.0), (array([4.32446697, 1.01781785]), 1.0), (array([3.62140857, 1.31221853]), 2.0), (array([ 3.40910773, -1.09605838]), 3.0), (array([2.08122805, 1.95332431]), 4.0), (array([5.18645851, 0.264209  ]), 3.0), (array([ 4.47104397, -3.36906979]), 4.0), (array([7.04722514, 2.53839253]), 3.0)] 
+
+history array at epoch  {0}  sample  {99}  :  [(array([3.18173012, 4.02398429]), -1.0), (array([ 3.1378471 , -1.93786434]), 0.0), (array([ 2.77318887, -0.2633231 ]), 1.0), (array([ 2.12962518, -1.94226489]), 2.0), (array([4.32446697, 1.01781785]), 1.0), (array([3.62140857, 1.31221853]), 2.0), (array([ 3.40910773, -1.09605838]), 3.0), (array([2.08122805, 1.95332431]), 4.0), (array([5.18645851, 0.264209  ]), 3.0), (array([ 4.47104397, -3.36906979]), 4.0), (array([7.04722514, 2.53839253]), 3.0), (array([6.51581261, 2.66839097]), 4.0)] 
+
+history array at epoch  {1}  sample  {1}  :  [(array([3.18173012, 4.02398429]), -1.0), (array([ 3.1378471 , -1.93786434]), 0.0), (array([ 2.77318887, -0.2633231 ]), 1.0), (array([ 2.12962518, -1.94226489]), 2.0), (array([4.32446697, 1.01781785]), 1.0), (array([3.62140857, 1.31221853]), 2.0), (array([ 3.40910773, -1.09605838]), 3.0), (array([2.08122805, 1.95332431]), 4.0), (array([5.18645851, 0.264209  ]), 3.0), (array([ 4.47104397, -3.36906979]), 4.0), (array([7.04722514, 2.53839253]), 3.0), (array([6.51581261, 2.66839097]), 4.0), (array([6.01817204, 1.20608633]), 5.0)] 
+
+history array at epoch  {1}  sample  {2}  :  [(array([3.18173012, 4.02398429]), -1.0), (array([ 3.1378471 , -1.93786434]), 0.0), (array([ 2.77318887, -0.2633231 ]), 1.0), (array([ 2.12962518, -1.94226489]), 2.0), (array([4.32446697, 1.01781785]), 1.0), (array([3.62140857, 1.31221853]), 2.0), (array([ 3.40910773, -1.09605838]), 3.0), (array([2.08122805, 1.95332431]), 4.0), (array([5.18645851, 0.264209  ]), 3.0), (array([ 4.47104397, -3.36906979]), 4.0), (array([7.04722514, 2.53839253]), 3.0), (array([6.51581261, 2.66839097]), 4.0), (array([6.01817204, 1.20608633]), 5.0), (array([ 5.30919124, -0.21012546]), 6.0)] 
+
+history array at epoch  {1}  sample  {8}  :  [(array([3.18173012, 4.02398429]), -1.0), (array([ 3.1378471 , -1.93786434]), 0.0), (array([ 2.77318887, -0.2633231 ]), 1.0), (array([ 2.12962518, -1.94226489]), 2.0), (array([4.32446697, 1.01781785]), 1.0), (array([3.62140857, 1.31221853]), 2.0), (array([ 3.40910773, -1.09605838]), 3.0), (array([2.08122805, 1.95332431]), 4.0), (array([5.18645851, 0.264209  ]), 3.0), (array([ 4.47104397, -3.36906979]), 4.0), (array([7.04722514, 2.53839253]), 3.0), (array([6.51581261, 2.66839097]), 4.0), (array([6.01817204, 1.20608633]), 5.0), (array([ 5.30919124, -0.21012546]), 6.0), (array([4.19188526, 1.28706508]), 7.0)] 
+
+history array at epoch  {1}  sample  {12}  :  [(array([3.18173012, 4.02398429]), -1.0), (array([ 3.1378471 , -1.93786434]), 0.0), (array([ 2.77318887, -0.2633231 ]), 1.0), (array([ 2.12962518, -1.94226489]), 2.0), (array([4.32446697, 1.01781785]), 1.0), (array([3.62140857, 1.31221853]), 2.0), (array([ 3.40910773, -1.09605838]), 3.0), (array([2.08122805, 1.95332431]), 4.0), (array([5.18645851, 0.264209  ]), 3.0), (array([ 4.47104397, -3.36906979]), 4.0), (array([7.04722514, 2.53839253]), 3.0), (array([6.51581261, 2.66839097]), 4.0), (array([6.01817204, 1.20608633]), 5.0), (array([ 5.30919124, -0.21012546]), 6.0), (array([4.19188526, 1.28706508]), 7.0), (array([ 4.14800223, -4.67478355]), 8.0)] 
+
+history array at epoch  {1}  sample  {17}  :  [(array([3.18173012, 4.02398429]), -1.0), (array([ 3.1378471 , -1.93786434]), 0.0), (array([ 2.77318887, -0.2633231 ]), 1.0), (array([ 2.12962518, -1.94226489]), 2.0), (array([4.32446697, 1.01781785]), 1.0), (array([3.62140857, 1.31221853]), 2.0), (array([ 3.40910773, -1.09605838]), 3.0), (array([2.08122805, 1.95332431]), 4.0), (array([5.18645851, 0.264209  ]), 3.0), (array([ 4.47104397, -3.36906979]), 4.0), (array([7.04722514, 2.53839253]), 3.0), (array([6.51581261, 2.66839097]), 4.0), (array([6.01817204, 1.20608633]), 5.0), (array([ 5.30919124, -0.21012546]), 6.0), (array([4.19188526, 1.28706508]), 7.0), (array([ 4.14800223, -4.67478355]), 8.0), (array([ 7.90712105, -2.99617403]), 7.0)] 
+
+history array at epoch  {1}  sample  {18}  :  [(array([3.18173012, 4.02398429]), -1.0), (array([ 3.1378471 , -1.93786434]), 0.0), (array([ 2.77318887, -0.2633231 ]), 1.0), (array([ 2.12962518, -1.94226489]), 2.0), (array([4.32446697, 1.01781785]), 1.0), (array([3.62140857, 1.31221853]), 2.0), (array([ 3.40910773, -1.09605838]), 3.0), (array([2.08122805, 1.95332431]), 4.0), (array([5.18645851, 0.264209  ]), 3.0), (array([ 4.47104397, -3.36906979]), 4.0), (array([7.04722514, 2.53839253]), 3.0), (array([6.51581261, 2.66839097]), 4.0), (array([6.01817204, 1.20608633]), 5.0), (array([ 5.30919124, -0.21012546]), 6.0), (array([4.19188526, 1.28706508]), 7.0), (array([ 4.14800223, -4.67478355]), 8.0), (array([ 7.90712105, -2.99617403]), 7.0), (array([ 7.54246282, -1.32163278]), 8.0)] 
+
+history array at epoch  {1}  sample  {65}  :  [(array([3.18173012, 4.02398429]), -1.0), (array([ 3.1378471 , -1.93786434]), 0.0), (array([ 2.77318887, -0.2633231 ]), 1.0), (array([ 2.12962518, -1.94226489]), 2.0), (array([4.32446697, 1.01781785]), 1.0), (array([3.62140857, 1.31221853]), 2.0), (array([ 3.40910773, -1.09605838]), 3.0), (array([2.08122805, 1.95332431]), 4.0), (array([5.18645851, 0.264209  ]), 3.0), (array([ 4.47104397, -3.36906979]), 4.0), (array([7.04722514, 2.53839253]), 3.0), (array([6.51581261, 2.66839097]), 4.0), (array([6.01817204, 1.20608633]), 5.0), (array([ 5.30919124, -0.21012546]), 6.0), (array([4.19188526, 1.28706508]), 7.0), (array([ 4.14800223, -4.67478355]), 8.0), (array([ 7.90712105, -2.99617403]), 7.0), (array([ 7.54246282, -1.32163278]), 8.0), (array([6.21458314, 1.72774991]), 9.0)] 
+
+history array at epoch  {1}  sample  {69}  :  [(array([3.18173012, 4.02398429]), -1.0), (array([ 3.1378471 , -1.93786434]), 0.0), (array([ 2.77318887, -0.2633231 ]), 1.0), (array([ 2.12962518, -1.94226489]), 2.0), (array([4.32446697, 1.01781785]), 1.0), (array([3.62140857, 1.31221853]), 2.0), (array([ 3.40910773, -1.09605838]), 3.0), (array([2.08122805, 1.95332431]), 4.0), (array([5.18645851, 0.264209  ]), 3.0), (array([ 4.47104397, -3.36906979]), 4.0), (array([7.04722514, 2.53839253]), 3.0), (array([6.51581261, 2.66839097]), 4.0), (array([6.01817204, 1.20608633]), 5.0), (array([ 5.30919124, -0.21012546]), 6.0), (array([4.19188526, 1.28706508]), 7.0), (array([ 4.14800223, -4.67478355]), 8.0), (array([ 7.90712105, -2.99617403]), 7.0), (array([ 7.54246282, -1.32163278]), 8.0), (array([6.21458314, 1.72774991]), 9.0), (array([ 8.21434374, -0.86731136]), 8.0)] 
+
+history array at epoch  {2}  sample  {8}  :  [(array([3.18173012, 4.02398429]), -1.0), (array([ 3.1378471 , -1.93786434]), 0.0), (array([ 2.77318887, -0.2633231 ]), 1.0), (array([ 2.12962518, -1.94226489]), 2.0), (array([4.32446697, 1.01781785]), 1.0), (array([3.62140857, 1.31221853]), 2.0), (array([ 3.40910773, -1.09605838]), 3.0), (array([2.08122805, 1.95332431]), 4.0), (array([5.18645851, 0.264209  ]), 3.0), (array([ 4.47104397, -3.36906979]), 4.0), (array([7.04722514, 2.53839253]), 3.0), (array([6.51581261, 2.66839097]), 4.0), (array([6.01817204, 1.20608633]), 5.0), (array([ 5.30919124, -0.21012546]), 6.0), (array([4.19188526, 1.28706508]), 7.0), (array([ 4.14800223, -4.67478355]), 8.0), (array([ 7.90712105, -2.99617403]), 7.0), (array([ 7.54246282, -1.32163278]), 8.0), (array([6.21458314, 1.72774991]), 9.0), (array([ 8.21434374, -0.86731136]), 8.0), (array([7.09703775, 0.62987918]), 9.0)]
+\end{lstlisting}
+
+\section*{Plots of Decision Boundary}\label{sec:Decision_boundary}
+\begin{figure}[H]
+\centering
+
+% 1st row
+\begin{subfigure}{0.4\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{Media/Convergence plots/boundary_update_0.png}
+    \caption{Plot 1}
+\end{subfigure}
+\hfill
+\begin{subfigure}{0.4\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{Media/Convergence plots/boundary_update_1.png}
+    \caption{Plot 2}
+\end{subfigure}
+
+\vspace{0.3cm}
+
+% 2nd row
+\begin{subfigure}{0.4\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{Media/Convergence plots/boundary_update_2.png}
+    \caption{Plot 3}
+\end{subfigure}
+\hfill
+\begin{subfigure}{0.4\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{Media/Convergence plots/boundary_update_3.png}
+    \caption{Plot 4}
+\end{subfigure}
+
+\vspace{0.3cm}
+
+% 3rd row
+\begin{subfigure}{0.4\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{Media/Convergence plots/boundary_update_4.png}
+    \caption{Plot 5}
+\end{subfigure}
+\hfill
+\begin{subfigure}{0.4\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{Media/Convergence plots/boundary_update_5.png}
+    \caption{Plot 6}
+\end{subfigure}
+
+\vspace{0.3cm}
+\caption{Evolution of Perceptron Decision Boundary}
+\end{figure}
+
+\newpage
+\begin{figure}[H]
+\centering
+
+% 1st row
+\begin{subfigure}{0.4\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{Media/Convergence plots/boundary_update_6.png}
+    \caption{Plot 7}
+\end{subfigure}
+\hfill
+\begin{subfigure}{0.4\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{Media/Convergence plots/boundary_update_7.png}
+    \caption{Plot 8}
+\end{subfigure}
+
+\vspace{0.3cm}
+
+% 2nd row
+\begin{subfigure}{0.4\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{Media/Convergence plots/boundary_update_8.png}
+    \caption{Plot 9}
+\end{subfigure}
+\hfill
+\begin{subfigure}{0.4\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{Media/Convergence plots/boundary_update_9.png}
+    \caption{Plot 10}
+\end{subfigure}
+
+\vspace{0.3cm}
+
+% 3rd row
+\begin{subfigure}{0.4\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{Media/Convergence plots/boundary_update_10.png}
+    \caption{Plot 11}
+\end{subfigure}
+\hfill
+\begin{subfigure}{0.4\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{Media/Convergence plots/boundary_update_11.png}
+    \caption{Plot 12}
+\end{subfigure}
+
+\vspace{0.3cm}
+\caption{Evolution of Perceptron Decision Boundary}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+
+% 1st row
+\begin{subfigure}{0.4\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{Media/Convergence plots/boundary_update_12.png}
+    \caption{Plot 13}
+\end{subfigure}
+\hfill
+\begin{subfigure}{0.4\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{Media/Convergence plots/boundary_update_13.png}
+    \caption{Plot 14}
+\end{subfigure}
+
+\vspace{0.3cm}
+
+% 2nd row
+\begin{subfigure}{0.4\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{Media/Convergence plots/boundary_update_14.png}
+    \caption{Plot 15}
+\end{subfigure}
+\hfill
+\begin{subfigure}{0.4\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{Media/Convergence plots/boundary_update_15.png}
+    \caption{Plot 16}
+\end{subfigure}
+
+\vspace{0.3cm}
+
+% 3rd row
+\begin{subfigure}{0.4\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{Media/Convergence plots/boundary_update_16.png}
+    \caption{Plot 17}
+\end{subfigure}
+\hfill
+\begin{subfigure}{0.4\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{Media/Convergence plots/boundary_update_17.png}
+    \caption{Plot 18}
+\end{subfigure}
+
+\vspace{0.3cm}
+\caption{Evolution of Perceptron Decision Boundary}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+
+% 1st row
+\begin{subfigure}{0.4\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{Media/Convergence plots/boundary_update_18.png}
+    \caption{Plot 19}
+\end{subfigure}
+\hfill
+\begin{subfigure}{0.4\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{Media/Convergence plots/boundary_update_19.png}
+    \caption{Plot 20}
+\end{subfigure}
+
+\vspace{0.3cm}
+
+% 2nd row
+\begin{subfigure}{0.4\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{Media/Convergence plots/boundary_update_20.png}
+    \caption{Plot 21}
+\end{subfigure}
+\hfill
+\begin{subfigure}{0.4\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{Media/Convergence plots/boundary_epoch_3.png}
+    \caption{Plot 22}
+\end{subfigure}
+
+\vspace{0.3cm}
+\caption{Evolution of Perceptron Decision Boundary}
+\end{figure}
+
+
+\section*{Project Repository and Source Files}
+
+
+The complete source code used for data generation, perceptron training, visualization, animation, and theoretical margin computation is available in the official Git repository linked below. The repository also contains:
+\begin{itemize}
+    \item Python implementations of the perceptron algorithm (with bias),
+    \item Synthetic dataset generation scripts,
+    \item Plotting utilities for decision boundary evolution,
+    \item Full report \LaTeX{} source file,
+    \item Experimental results and saved convergence plots.
+\end{itemize}
+
+\noindent\textbf{GitHub Repository Link:}\\[2pt]
+\href{https://github.com/Adithi-27/Verification-of-Perceptron-Convergence-Theorem-}{\texttt{Repository Link}}
+
+\vspace{0.2cm}
+\end{document}
+    
